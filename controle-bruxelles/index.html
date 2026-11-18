@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Contrôle Bruxelles – contrôles signalés dans le métro, le tram et le bus</title>
+<meta name="description" content="Signale et vois en direct les contrôles de titres de transport dans le métro, le tram et le bus à Bruxelles. Appli communautaire non officielle.">
+<meta name="theme-color" content="#0077C0">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="canonical" href="https://liseo-apps.github.io/controle-bruxelles/">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Contrôle Bruxelles">
+<meta property="og:description" content="Les contrôles signalés en direct dans le métro, le tram et le bus à Bruxelles.">
+<meta property="og:url" content="https://liseo-apps.github.io/controle-bruxelles/">
+<meta property="og:image" content="https://liseo-apps.github.io/controle-bruxelles/partage.jpg">
+<meta property="og:locale" content="fr_BE">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+<!-- Google AdSense : remplir ADSENSE_CLIENT plus bas quand le compte AdSense sera validé. -->
+<style>
+:root{--blue:#0077C0;--blue-dark:#005F9A;--red:#D44339;--ink:#101828;--grey:#6D7380;--bg:#F0F7FB;--pale:#E0EFF8;--line:#D0D5DD;--green:#12B76A}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;background:var(--bg);color:var(--ink);-webkit-font-smoothing:antialiased}
+button,select{font:inherit}
+.wrap{max-width:1180px;margin:0 auto;display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:20px;padding:0 16px}
+@media (max-width:900px){.wrap{grid-template-columns:1fr;padding:0}.side{display:none}}
+header{background:var(--blue);color:#fff;position:sticky;top:0;z-index:1000;box-shadow:0 2px 6px rgba(0,0,0,.12)}
+.bar{max-width:1180px;margin:0 auto;display:flex;align-items:center;gap:10px;padding:10px 16px}
+.bar img{width:36px;height:36px}
+.bar h1{font-size:19px;margin:0;flex:1;font-weight:700;letter-spacing:.2px}
+.bar h1 small{display:block;font-size:12px;font-weight:400;opacity:.85}
+.ibtn{background:rgba(255,255,255,.14);border:0;color:#fff;width:38px;height:38px;border-radius:50%;cursor:pointer;font-size:18px}
+.ibtn:hover{background:rgba(255,255,255,.25)}
+.report-btn{background:var(--red);color:#fff;border:0;border-radius:22px;padding:10px 16px;font-weight:700;cursor:pointer;white-space:nowrap;box-shadow:0 2px 6px rgba(0,0,0,.2)}
+.report-btn:hover{filter:brightness(1.07)}
+.tabs{max-width:1180px;margin:0 auto;display:flex}
+.tab{flex:1;max-width:260px;background:none;border:0;color:rgba(255,255,255,.75);padding:11px 0 13px;font-weight:600;cursor:pointer;border-bottom:3px solid transparent}
+.tab.on{color:#fff;border-bottom-color:#fff}
+main{min-width:0;padding:12px 0 90px}
+@media (max-width:900px){main{padding:10px 10px 90px}}
+.adlabel{font-size:11px;color:var(--grey);text-transform:none;margin-bottom:4px}
+.adtop{background:#fff;border:1px solid var(--pale);border-radius:14px;padding:8px 10px;margin-bottom:12px}
+.promo{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit}
+.promo .em{font-size:30px;width:46px;height:46px;display:grid;place-items:center;background:var(--bg);border-radius:12px;flex:none}
+.promo b{display:block;font-size:15px}
+.promo span{font-size:13px;color:var(--grey)}
+.promo .go{margin-left:auto;color:var(--blue);font-weight:700;white-space:nowrap}
+.status{font-size:13px;color:var(--grey);margin:4px 2px 10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.status select{margin-left:auto;padding:6px 8px;border:1px solid var(--line);border-radius:10px;background:#fff;max-width:230px}
+.card{background:#fff;border-radius:14px;box-shadow:0 1px 2px rgba(16,24,40,.06);margin-bottom:10px;overflow:hidden}
+.card .head{display:flex;align-items:center;gap:10px;padding:12px}
+.badge{display:inline-grid;place-items:center;min-width:40px;height:30px;padding:0 8px;border-radius:7px;font-weight:800;font-size:15px}
+.badge.M{border-radius:50%;min-width:30px;width:30px;padding:0}
+.card .stop{font-weight:700;font-size:16px}
+.card .stop small{display:block;font-weight:400;color:var(--grey);font-size:13px}
+.card .ago{margin-left:auto;font-size:13px;color:var(--red);font-weight:700;white-space:nowrap}
+.card .body{padding:0 12px 12px;text-align:center}
+.meta{font-size:12px;color:var(--grey);white-space:pre-line}
+.q{font-weight:700;margin:10px 0 6px}
+.votes{display:flex;gap:12px}
+.votes button{flex:1;height:44px;border:0;border-radius:22px;color:#fff;font-weight:700;cursor:pointer}
+.no{background:var(--grey)}.yes{background:var(--green)}
+.votes button:disabled{background:var(--line);cursor:default}
+.onmap{display:inline-block;margin-top:10px;color:var(--blue);font-weight:700;cursor:pointer;background:none;border:0}
+.empty{text-align:center;padding:40px 20px 20px;color:var(--grey);font-size:16px}
+.empty .sun{font-size:56px;color:#F79009}
+#map{height:calc(100vh - 220px);min-height:420px;border-radius:14px;overflow:hidden;background:#dde}
+@media (max-width:900px){#map{height:calc(100vh - 200px);border-radius:0;margin:0 -10px}}
+.maptools{display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap}
+.maptools button{background:#fff;border:1px solid var(--line);border-radius:18px;padding:7px 12px;cursor:pointer;font-weight:600}
+.side{padding-top:12px}
+.sbox{background:#fff;border-radius:14px;padding:14px;margin-bottom:14px;position:sticky;top:120px}
+.sbox h3{margin:0 0 8px;font-size:15px}
+.sbox p{font-size:13px;color:var(--grey);margin:6px 0}
+.sad .promo{padding:8px 0;border-top:1px solid var(--pale)}
+.play{display:block;text-align:center;background:var(--ink);color:#fff;text-decoration:none;border-radius:10px;padding:10px;font-weight:700;margin-top:8px}
+.adsense{min-height:90px;margin:10px 0;display:none}
+.sticky-ad{position:fixed;left:0;right:0;bottom:0;z-index:1001;background:#fff;border-top:1px solid var(--line);padding:6px 10px calc(6px + env(safe-area-inset-bottom));display:flex;align-items:center;gap:8px}
+.sticky-ad .promo{flex:1;min-width:0}
+.sticky-ad .promo b{font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sticky-ad .x{background:none;border:0;color:var(--grey);font-size:18px;cursor:pointer;width:34px;height:34px}
+footer{font-size:12px;color:var(--grey);text-align:center;padding:20px 16px 110px;line-height:1.6}
+footer a{color:var(--blue)}
+.modal{position:fixed;inset:0;background:rgba(16,24,40,.55);z-index:2000;display:none;align-items:flex-end;justify-content:center}
+.modal.on{display:flex}
+@media (min-width:600px){.modal{align-items:center}}
+.sheet{background:#fff;width:100%;max-width:460px;border-radius:20px 20px 0 0;padding:20px;max-height:92vh;overflow:auto}
+@media (min-width:600px){.sheet{border-radius:20px}}
+.sheet h2{margin:0 0 14px;font-size:19px}
+.sheet select{width:100%;padding:13px 12px;border:1px solid var(--line);border-radius:12px;background:#fff;font-size:16px;margin-bottom:14px}
+.sheet select:disabled{background:#F2F4F7;color:var(--grey)}
+.big{width:100%;height:52px;border:0;border-radius:26px;background:var(--red);color:#fff;font-weight:700;font-size:17px;cursor:pointer}
+.big:disabled{background:var(--line);cursor:default}
+.ghost{width:100%;height:46px;border:0;background:none;color:var(--grey);font-weight:600;cursor:pointer;margin-top:6px}
+.slow{color:#B54708;font-weight:700;text-align:center;margin-top:8px;display:none}
+.love{color:var(--red);font-size:22px;font-weight:800;text-align:center;margin:6px 0}
+.center{text-align:center;color:var(--grey)}
+.info p{font-size:14px;line-height:1.5}
+.info .src{font-size:12px;color:var(--grey)}
+.toast{position:fixed;left:50%;bottom:90px;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 16px;border-radius:20px;z-index:3000;font-size:14px;display:none}
+.pulse{width:22px;height:22px;border-radius:50%;background:var(--red);border:3px solid #fff;box-shadow:0 0 0 0 rgba(212,67,57,.6);animation:p 1.6s infinite}
+@keyframes p{70%{box-shadow:0 0 0 14px rgba(212,67,57,0)}100%{box-shadow:0 0 0 0 rgba(212,67,57,0)}}
+.me{width:16px;height:16px;border-radius:50%;background:#1570EF;border:3px solid #fff;box-shadow:0 0 0 2px rgba(21,112,239,.35)}
+.leaflet-popup-content{font-family:inherit}
+.pop b{font-size:15px}.pop small{color:var(--grey)}
+.pop button{margin-top:8px;width:100%;border:0;border-radius:16px;background:var(--red);color:#fff;font-weight:700;padding:8px;cursor:pointer}
+.hidden{display:none!important}
+@media (max-width:520px){.bar{gap:6px;padding:8px 10px}.bar h1{font-size:17px}.bar h1 small{display:none}.bar img{width:30px;height:30px}.ibtn{width:34px;height:34px;font-size:16px}.report-btn{padding:9px 12px}}
+</style>
+</head>
+<body>
+<header>
+  <div class="bar">
+    <img src="icon.svg" alt="">
+    <h1>Contrôle Bruxelles<small>Métro · Tram · Bus — non officiel</small></h1>
+    <button class="report-btn" id="btnReport">+ Signaler</button>
+    <button class="ibtn" id="btnRefresh" title="Actualiser" aria-label="Actualiser">⟳</button>
+    <button class="ibtn" id="btnInfo" title="Informations" aria-label="Informations">ⓘ</button>
+  </div>
+  <div class="tabs">
+    <button class="tab on" data-tab="list">Derniers contrôles</button>
+    <button class="tab" data-tab="map">Carte</button>
+  </div>
+</header>
+
+<div class="wrap">
+  <main>
+    <div class="adtop" id="adTop"><div class="adlabel">Annonce · Bon plan AliExpress</div><a class="promo" target="_blank" rel="sponsored noopener"></a></div>
+    <ins class="adsbygoogle adsense" id="adsenseTop" style="display:none"></ins>
+
+    <section id="viewList">
+      <div class="status"><span id="status">Chargement…</span>
+        <select id="filter" aria-label="Filtrer par ligne"><option value="">Toutes les lignes</option></select>
+      </div>
+      <div id="list"></div>
+    </section>
+
+    <section id="viewMap" class="hidden">
+      <div class="maptools">
+        <button id="btnLocate">📍 Ma position</button>
+        <button id="btnStations">Afficher les arrêts</button>
+      </div>
+      <div id="map"></div>
+      <p class="center" style="font-size:13px">Touchez un arrêt pour signaler un contrôle à cet endroit.</p>
+    </section>
+  </main>
+
+  <aside class="side">
+    <div class="sbox">
+      <h3>L'appli Android</h3>
+      <p>Signalez encore plus vite avec l'appli, et retrouvez votre arrêt le plus proche automatiquement.</p>
+      <a class="play" id="playLink" href="https://play.google.com/store/apps/details?id=com.liseo.controlebxl" target="_blank" rel="noopener">▶ Bientôt sur Google Play</a>
+      <div class="sad" id="adSide" style="margin-top:14px"><div class="adlabel">Annonces · Bons plans AliExpress</div></div>
+      <ins class="adsbygoogle adsense" id="adsenseSide" style="display:none"></ins>
+    </div>
+  </aside>
+</div>
+
+<footer>
+  ⚠️ Site non officiel, sans lien avec la STIB-MIVB. Les signalements viennent des utilisateurs et peuvent être faux ou dépassés.<br>
+  Voyagez toujours avec un titre de transport valable.<br>
+  Réseau : STIB-MIVB Open Data (data.belgianmobility.io), licence CC BY 4.0 · Carte © contributeurs OpenStreetMap<br>
+  <a href="../privacy-controle-bruxelles.html">Confidentialité</a> · <a href="mailto:liseo.apps@gmail.com">liseo.apps@gmail.com</a> · Liseo Apps
+</footer>
+
+<div class="sticky-ad" id="adBottom"><a class="promo" target="_blank" rel="sponsored noopener"></a><button class="x" id="closeBottom" aria-label="Fermer l'annonce">✕</button></div>
+
+<!-- Signaler -->
+<div class="modal" id="mReport"><div class="sheet">
+  <h2 id="rTitle">Signaler un contrôle</h2>
+  <select id="rLine"><option value="">Choisissez votre ligne</option></select>
+  <select id="rStop" disabled><option value="">Choisissez votre arrêt</option></select>
+  <button class="big" id="rSend" disabled>✔ Signaler</button>
+  <div class="slow" id="rSlow">⏱ N'allez pas trop vite</div>
+  <button class="ghost" data-close>Annuler</button>
+</div></div>
+
+<!-- Merci -->
+<div class="modal" id="mThanks"><div class="sheet">
+  <div class="love">❤ Bruxelles vous aime ❤</div>
+  <p class="center">Merci ! Votre signalement est visible par tous pendant 1 heure.</p>
+  <button class="big" style="background:var(--blue)" id="btnShare">Partager le site</button>
+  <button class="ghost" data-close>Retourner à la liste des contrôles</button>
+</div></div>
+
+<!-- Infos -->
+<div class="modal" id="mInfo"><div class="sheet info">
+  <h2>Comment ça marche ?</h2>
+  <p>🚨 <b>Signaler</b> : choisissez la ligne, puis l'arrêt, et touchez « Signaler ». Le contrôle est visible par tous pendant 1 heure.</p>
+  <p>👍 <b>Valider</b> : vous voyez aussi les contrôleurs ? Touchez « Vrai ». Ils sont partis ou c'est une erreur ? Touchez « Faux ». Les signalements contredits disparaissent.</p>
+  <p>🗺️ <b>Carte</b> : toutes les lignes de métro, tram, bus et Noctis, et les contrôles en cours.</p>
+  <p>Les mêmes signalements sont partagés avec l'appli Android Contrôle Bruxelles.</p>
+  <p>⚠️ Service non officiel, sans lien avec la STIB-MIVB. Voyagez toujours avec un titre de transport valable.</p>
+  <p class="src">Réseau : STIB-MIVB Open Data, CC BY 4.0 (<span id="netVer"></span>). Carte © OpenStreetMap. Un identifiant aléatoire est gardé dans votre navigateur pour compter les votes (un vote par personne). Aucun compte, aucune donnée personnelle.</p>
+  <button class="ghost" data-close>Fermer</button>
+</div></div>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+<script>
+"use strict";
+// ---------------------------------------------------------------- réglages
+const DB = "https://controle-bruxelles-default-rtdb.europe-west1.firebasedatabase.app";
+const LIFE_MS = 60 * 60 * 1000;          // un signalement reste 1 h
+const MIN_GAP = 90 * 1000;               // 90 s entre deux signalements
+const REFRESH_MS = 30 * 1000;
+const ADSENSE_CLIENT = "";               // ex. "ca-pub-8004461294369614" quand AdSense sera validé
+const ADSENSE_SLOT_TOP = "", ADSENSE_SLOT_SIDE = "";
+const PROMOS = [
+  ["🔋","Batterie externe 20 000 mAh","Plus jamais à plat pendant votre trajet","https://s.click.aliexpress.com/e/_c413WFqp"],
+  ["🎧","Écouteurs sans fil","Votre musique dans le métro et le tram","https://s.click.aliexpress.com/e/_c4sOFSw5"],
+  ["💳","Coque avec porte-carte","Votre carte de transport toujours sous la main","https://s.click.aliexpress.com/e/_c3NnCpeZ"],
+  ["☂️","Parapluie compact anti-vent","Pour la météo bruxelloise","https://s.click.aliexpress.com/e/_c3m0zxVJ"],
+  ["🎒","Sac à dos antivol","Voyagez l'esprit tranquille aux heures de pointe","https://s.click.aliexpress.com/e/_c2vcwHtR"],
+  ["🧤","Gants tactiles","Utilisez votre téléphone à l'arrêt, même en hiver","https://s.click.aliexpress.com/e/_c2zMQrb7"]
+];
+
+// ---------------------------------------------------------------- utilitaires
+const $ = s => document.querySelector(s);
+const store = {
+  get(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : v; } catch (e) { return d; } },
+  set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
+};
+let me = store.get("cbx_dev", "");
+if (!me) { me = "w" + Math.random().toString(36).slice(2, 10) + Date.now().toString(36); store.set("cbx_dev", me); }
+let serverOffset = 0;
+const now = () => Date.now() + serverOffset;
+function esc(s) { return String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
+function ago(t) {
+  const m = Math.max(0, Math.round((now() - t) / 60000));
+  if (m < 1) return "à l'instant";
+  if (m < 60) return m + " min";
+  return Math.floor(m / 60) + " h " + String(m % 60).padStart(2, "0");
+}
+function hhmm() { const d = new Date(); return d.getHours() + ":" + String(d.getMinutes()).padStart(2, "0"); }
+function toast(msg) { const t = $("#toast"); t.textContent = msg; t.style.display = "block"; clearTimeout(toast.t); toast.t = setTimeout(() => t.style.display = "none", 2600); }
+function dist(a, b, c, d) { const R = 6371000, r = Math.PI / 180, x = (d - b) * r * Math.cos((a + c) / 2 * r), y = (c - a) * r; return Math.sqrt(x * x + y * y) * R; }
+const SMALL = new Set(["de", "du", "des", "la", "le", "les", "l", "d", "et", "van", "der", "den", "het", "en", "sur", "aux", "au"]);
+function title(s) {
+  let i = 0;
+  return s.toLowerCase().replace(/[a-zà-ÿ]+/g, (w, pos) => { const first = i++ === 0; return !first && SMALL.has(w) ? w : w.charAt(0).toUpperCase() + w.slice(1); });
+}
+
+// ---------------------------------------------------------------- réseau
+let NET = null, LINES = [], BYID = {};
+const MODE = { M: "Métro", T: "Tram", B: "Bus", N: "Noctis" };
+function lineSort(a, b) {
+  const o = { M: 0, T: 1, B: 2, N: 3 };
+  if (o[a.m] !== o[b.m]) return o[a.m] - o[b.m];
+  const na = parseInt(a.id.replace(/\D/g, "")) || 0, nb = parseInt(b.id.replace(/\D/g, "")) || 0;
+  return na - nb || a.id.localeCompare(b.id);
+}
+function stopsOf(l) {
+  const out = [], seen = new Set();
+  for (const d of l.d) for (const i of d.s) if (!seen.has(i) && NET.st[i]) { seen.add(i); out.push(i); }
+  return out;
+}
+function stopName(i) { const s = NET.st[i]; if (!s) return "?"; const fr = title(s[0]), nl = title(s[1]); return fr.toLowerCase() === nl.toLowerCase() ? fr : fr + " / " + nl; }
+function badgeHtml(l) {
+  if (!l) return '<span class="badge" style="background:#98A2B3;color:#fff">?</span>';
+  return '<span class="badge ' + (l.m === "M" ? "M" : "") + '" style="background:' + esc(l.c) + ';color:' + esc(l.t) + '">' + esc(l.id) + "</span>";
+}
+
+// ---------------------------------------------------------------- signalements (Firebase)
+let REPORTS = [], ACTIVE = [], lastOk = 0, filterLine = "";
+async function fetchReports() {
+  const since = Date.now() - 3 * 3600 * 1000;
+  const url = DB + '/reports.json?orderBy=' + encodeURIComponent('"t"') + '&startAt=' + since + '&limitToLast=300';
+  const r = await fetch(url, { cache: "no-store" });
+  if (!r.ok) throw new Error("HTTP " + r.status);
+  const date = r.headers.get("date");
+  if (date) { const off = new Date(date).getTime() - Date.now(); if (Math.abs(off) > 60000) serverOffset = off; }
+  const o = await r.json() || {};
+  const out = [];
+  for (const id in o) {
+    const x = o[id]; if (!x || typeof x !== "object") continue;
+    const rep = { id, st: x.st ?? -1, ln: x.ln || "", t: +x.t || 0, dev: x.dev || "", lat: +x.lat || 0, lon: +x.lon || 0, conf: 0, gone: 0, lastConf: 0, lastGone: 0, iConf: false, iGone: false };
+    for (const d in (x.c || {})) { rep.conf++; rep.lastConf = Math.max(rep.lastConf, +x.c[d] || 0); if (d === me) rep.iConf = true; }
+    for (const d in (x.x || {})) { rep.gone++; rep.lastGone = Math.max(rep.lastGone, +x.x[d] || 0); if (d === me) rep.iGone = true; }
+    out.push(rep);
+  }
+  return out;
+}
+function isActive(r) {
+  if (r.iGone) return false;
+  const seen = Math.max(r.t, r.lastConf);
+  if (now() - seen > LIFE_MS) return false;
+  return !(r.gone >= 2 && r.gone > r.conf && r.lastGone > r.lastConf);
+}
+async function refresh(manual) {
+  try {
+    REPORTS = await fetchReports();
+    ACTIVE = REPORTS.filter(isActive).sort((a, b) => Math.max(b.t, b.lastConf) - Math.max(a.t, a.lastConf));
+    lastOk = Date.now();
+    if (manual) toast("Liste mise à jour");
+  } catch (e) {
+    if (manual || !lastOk) toast("Connexion impossible, nouvel essai bientôt");
+  }
+  renderList(); renderReportMarkers();
+}
+async function postReport(lineId, st) {
+  const s = NET.st[st];
+  const body = { st, ln: lineId, k: "stop", lat: Math.round(s[2] * 1e6) / 1e6, lon: Math.round(s[3] * 1e6) / 1e6, t: { ".sv": "timestamp" }, dev: me };
+  const r = await fetch(DB + "/reports.json", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+  if (!r.ok) throw new Error("HTTP " + r.status);
+}
+async function vote(rep, yes) {
+  const r = await fetch(DB + "/reports/" + encodeURIComponent(rep.id) + "/" + (yes ? "c" : "x") + "/" + me + ".json",
+    { method: "PUT", headers: { "Content-Type": "application/json" }, body: '{".sv":"timestamp"}' });
+  if (!r.ok) throw new Error("HTTP " + r.status);
+}
+
+// ---------------------------------------------------------------- liste
+function renderList() {
+  const box = $("#list");
+  const shown = ACTIVE.filter(r => !filterLine || r.ln === filterLine);
+  if (lastOk) {
+    const where = filterLine ? " sur la ligne " + filterLine : "";
+    $("#status").textContent = (shown.length ? shown.length + (shown.length > 1 ? " contrôles" : " contrôle") : "Aucun contrôle") + where + " dans la dernière heure · mis à jour à " + hhmm();
+  }
+  if (!shown.length) {
+    box.innerHTML = '<div class="empty"><div class="sun">☼</div>' + (!lastOk ? "Chargement…" :
+      filterLine ? "Pas de contrôle signalé sur la ligne " + esc(filterLine) + " pour le moment."
+        : "Il n'y a pas de contrôle signalé pour le moment, profitez de votre journée !") + "</div>";
+    return;
+  }
+  box.innerHTML = "";
+  for (const r of shown) box.appendChild(card(r));
+}
+function card(r) {
+  const l = BYID[r.ln];
+  const el = document.createElement("div"); el.className = "card";
+  const s = NET.st[r.st];
+  const fr = s ? title(s[0]) : "Arrêt inconnu", nl = s && s[1].toLowerCase() !== s[0].toLowerCase() ? title(s[1]) : "";
+  let meta = "Signalé il y a " + ago(r.t);
+  if (r.conf > 0) meta += " · vu encore il y a " + ago(r.lastConf);
+  if (r.gone > 0) meta += "\n👎 " + r.gone + (r.gone > 1 ? " personnes disent" : " personne dit") + " que c'est faux / fini";
+  if (r.dev === me) meta += "\n(votre signalement)";
+  const canYes = !r.iConf && r.dev !== me;
+  el.innerHTML =
+    '<div class="head">' + badgeHtml(l) + '<div class="stop">' + esc(fr) + (nl ? "<small>" + esc(nl) + "</small>" : "") +
+    (l ? "<small>" + MODE[l.m] + " " + esc(l.id) + "</small>" : "") + '</div><div class="ago">' + ago(Math.max(r.t, r.lastConf)) + "</div></div>" +
+    '<div class="body"><div class="meta">' + esc(meta) + '</div><div class="q">Valider ce contrôle</div>' +
+    '<div class="votes"><button class="no"' + (r.iGone ? " disabled" : "") + '>👎 Faux</button><button class="yes"' + (canYes ? "" : " disabled") + ">👍 Vrai</button></div>" +
+    '<button class="onmap">🗺 Voir sur la carte</button></div>';
+  el.querySelector(".no").onclick = e => doVote(e.target, r, false);
+  el.querySelector(".yes").onclick = e => doVote(e.target, r, true);
+  el.querySelector(".onmap").onclick = () => { setTab("map"); map.setView([r.lat, r.lon], 16); };
+  return el;
+}
+async function doVote(btn, r, yes) {
+  btn.disabled = true;
+  try { await vote(r, yes); toast(yes ? "Merci, contrôle confirmé 👍" : "Merci, c'est noté 👎"); refresh(); }
+  catch (e) { btn.disabled = false; toast("Vote impossible (connexion ?)"); }
+}
+
+// ---------------------------------------------------------------- formulaire
+let rLines = [], rStops = [], myPos = null;
+function openReport(presetSt) {
+  const ls = presetSt != null ? NET.st[presetSt][4].map(id => BYID[id]).filter(Boolean).sort(lineSort) : LINES;
+  rLines = ls;
+  $("#rTitle").textContent = presetSt != null ? "Contrôle à " + title(NET.st[presetSt][0]) : "Signaler un contrôle";
+  $("#rLine").innerHTML = '<option value="">Choisissez votre ligne</option>' +
+    ls.map((l, i) => '<option value="' + i + '">' + MODE[l.m] + " " + esc(l.id) + " – " + esc(title(l.n)) + "</option>").join("");
+  $("#rLine").dataset.preset = presetSt != null ? presetSt : "";
+  fillStops();
+  if (ls.length === 1) { $("#rLine").value = "0"; fillStops(); }
+  $("#rSlow").style.display = "none";
+  $("#rSend").textContent = "✔ Signaler";
+  open("#mReport");
+  if (presetSt == null && !myPos && navigator.geolocation) locate(false);
+}
+function fillStops() {
+  const v = $("#rLine").value, sel = $("#rStop");
+  if (v === "") { sel.innerHTML = '<option value="">Choisissez votre arrêt</option>'; sel.disabled = true; rStops = []; updSend(); return; }
+  const l = rLines[+v]; rStops = stopsOf(l);
+  sel.innerHTML = '<option value="">Choisissez votre arrêt</option>' + rStops.map((i, k) => '<option value="' + k + '">' + esc(stopName(i)) + "</option>").join("");
+  sel.disabled = false;
+  const preset = $("#rLine").dataset.preset;
+  let pick = "";
+  if (preset !== "") { const k = rStops.indexOf(+preset); if (k >= 0) pick = String(k); }
+  else if (myPos) {
+    let best = 1500;
+    rStops.forEach((i, k) => { const s = NET.st[i], d = dist(myPos[0], myPos[1], s[2], s[3]); if (d < best) { best = d; pick = String(k); } });
+  }
+  sel.value = pick; updSend();
+}
+function updSend() { $("#rSend").disabled = !($("#rLine").value !== "" && $("#rStop").value !== ""); }
+async function send() {
+  if (Date.now() - (+store.get("cbx_last", 0)) < MIN_GAP) { $("#rSlow").style.display = "block"; return; }
+  const l = rLines[+$("#rLine").value], st = rStops[+$("#rStop").value];
+  const b = $("#rSend"); b.disabled = true; b.textContent = "Envoi…";
+  try {
+    await postReport(l.id, st);
+    store.set("cbx_last", Date.now());
+    close("#mReport"); open("#mThanks"); refresh();
+  } catch (e) { b.disabled = false; b.textContent = "✔ Signaler"; toast("Envoi impossible (connexion ?)"); }
+}
+
+// ---------------------------------------------------------------- fenêtres
+function open(id) { $(id).classList.add("on"); }
+function close(id) { $(id).classList.remove("on"); }
+document.querySelectorAll(".modal").forEach(m => {
+  m.addEventListener("click", e => { if (e.target === m || e.target.hasAttribute("data-close")) { m.classList.remove("on"); if (m.id === "mThanks") setTab("list"); } });
+});
+document.addEventListener("keydown", e => { if (e.key === "Escape") document.querySelectorAll(".modal.on").forEach(m => m.classList.remove("on")); });
+
+// ---------------------------------------------------------------- onglets & carte
+let map = null, stationLayer = null, reportLayer = null, meMarker = null, showStations = false;
+function setTab(t) {
+  document.querySelectorAll(".tab").forEach(b => b.classList.toggle("on", b.dataset.tab === t));
+  $("#viewList").classList.toggle("hidden", t !== "list");
+  $("#viewMap").classList.toggle("hidden", t !== "map");
+  if (t === "map") { initMap(); setTimeout(() => map.invalidateSize(), 50); }
+  try { history.replaceState(null, "", t === "map" ? "#carte" : location.pathname); } catch (e) {}
+}
+function initMap() {
+  if (map) return;
+  map = L.map("map", { zoomControl: true, preferCanvas: true }).setView([50.8466, 4.3528], 13);
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 19, attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> · Réseau STIB-MIVB Open Data (CC BY 4.0)' }).addTo(map);
+  const order = ["B", "N", "T", "M"];
+  for (const m of order) for (const l of LINES.filter(x => x.m === m)) {
+    const p = l.d[0] && l.d[0].p; if (!p || p.length < 4) continue;
+    const pts = []; for (let i = 0; i < p.length; i += 2) pts.push([p[i], p[i + 1]]);
+    L.polyline(pts, { color: l.c, weight: m === "M" ? 6 : m === "T" ? 4 : 3, opacity: m === "B" || m === "N" ? .7 : .95 })
+      .bindTooltip(MODE[l.m] + " " + l.id + " – " + title(l.n), { sticky: true }).addTo(map);
+  }
+  stationLayer = L.layerGroup();
+  NET.st.forEach((s, i) => {
+    const metro = s[4].some(id => BYID[id] && BYID[id].m === "M");
+    L.circleMarker([s[2], s[3]], { radius: metro ? 6 : 4, color: "#101828", weight: 1.5, fillColor: "#fff", fillOpacity: 1 })
+      .bindPopup(() => stationPopup(i)).addTo(stationLayer);
+  });
+  reportLayer = L.layerGroup().addTo(map);
+  map.on("zoomend", syncStations); syncStations();
+  renderReportMarkers();
+}
+function syncStations() {
+  if (!map) return;
+  const want = showStations || map.getZoom() >= 15;
+  if (want && !map.hasLayer(stationLayer)) stationLayer.addTo(map);
+  if (!want && map.hasLayer(stationLayer)) map.removeLayer(stationLayer);
+  $("#btnStations").textContent = showStations ? "Masquer les arrêts" : "Afficher les arrêts";
+}
+function stationPopup(i) {
+  const s = NET.st[i];
+  const div = document.createElement("div"); div.className = "pop";
+  div.innerHTML = "<b>" + esc(title(s[0])) + "</b>" + (s[1].toLowerCase() !== s[0].toLowerCase() ? "<br><small>" + esc(title(s[1])) + "</small>" : "") +
+    '<div style="margin-top:6px;display:flex;gap:4px;flex-wrap:wrap">' + s[4].map(id => badgeHtml(BYID[id])).join("") + "</div>" +
+    "<button>🚨 Signaler un contrôle ici</button>";
+  div.querySelector("button").onclick = () => { map.closePopup(); openReport(i); };
+  return div;
+}
+function renderReportMarkers() {
+  if (!reportLayer) return;
+  reportLayer.clearLayers();
+  for (const r of ACTIVE) {
+    const l = BYID[r.ln], s = NET.st[r.st];
+    L.marker([r.lat, r.lon], { icon: L.divIcon({ className: "", html: '<div class="pulse"></div>', iconSize: [22, 22], iconAnchor: [11, 11] }), zIndexOffset: 1000 })
+      .bindPopup('<div class="pop"><b>Contrôle ' + (l ? MODE[l.m].toLowerCase() + " " + esc(l.id) : "") + "</b><br>" + esc(s ? title(s[0]) : "") + "<br><small>il y a " + ago(Math.max(r.t, r.lastConf)) + "</small></div>")
+      .addTo(reportLayer);
+  }
+}
+function locate(center) {
+  if (!navigator.geolocation) { toast("Position non disponible"); return; }
+  navigator.geolocation.getCurrentPosition(p => {
+    myPos = [p.coords.latitude, p.coords.longitude];
+    if (map) {
+      if (!meMarker) meMarker = L.marker(myPos, { icon: L.divIcon({ className: "", html: '<div class="me"></div>', iconSize: [16, 16], iconAnchor: [8, 8] }) }).addTo(map);
+      else meMarker.setLatLng(myPos);
+      if (center) map.setView(myPos, 16);
+    }
+    if ($("#mReport").classList.contains("on") && $("#rLine").value !== "" && $("#rStop").value === "") fillStops();
+  }, () => { if (center) toast("Autorisez la localisation pour voir votre position"); }, { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 });
+}
+
+// ---------------------------------------------------------------- annonces
+function promoHtml(p) { return '<span class="em">' + p[0] + '</span><span style="min-width:0"><b>' + esc(p[1]) + "</b><span>" + esc(p[2]) + '</span></span><span class="go">Voir ›</span>'; }
+let promoI = Math.floor(Math.random() * PROMOS.length);
+function rotatePromos() {
+  const a = PROMOS[promoI % PROMOS.length], b = PROMOS[(promoI + 3) % PROMOS.length];
+  const top = $("#adTop .promo"); top.href = a[3]; top.innerHTML = promoHtml(a);
+  const bot = $("#adBottom .promo"); bot.href = b[3]; bot.innerHTML = promoHtml(b);
+  promoI++;
+}
+function sidePromos() {
+  const box = $("#adSide");
+  PROMOS.forEach(p => { const a = document.createElement("a"); a.className = "promo"; a.href = p[3]; a.target = "_blank"; a.rel = "sponsored noopener"; a.innerHTML = promoHtml(p); box.appendChild(a); });
+}
+function adsense() {
+  if (!ADSENSE_CLIENT) return;
+  const s = document.createElement("script"); s.async = true; s.crossOrigin = "anonymous";
+  s.src = "https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=" + ADSENSE_CLIENT;
+  document.head.appendChild(s);
+  [["#adsenseTop", ADSENSE_SLOT_TOP], ["#adsenseSide", ADSENSE_SLOT_SIDE]].forEach(([id, slot]) => {
+    if (!slot) return; const el = $(id);
+    el.style.display = "block"; el.setAttribute("data-ad-client", ADSENSE_CLIENT); el.setAttribute("data-ad-slot", slot);
+    el.setAttribute("data-ad-format", "auto"); el.setAttribute("data-full-width-responsive", "true");
+    (window.adsbygoogle = window.adsbygoogle || []).push({});
+  });
+}
+
+// ---------------------------------------------------------------- démarrage
+async function start() {
+  rotatePromos(); sidePromos(); setInterval(rotatePromos, 9000); adsense();
+  $("#closeBottom").onclick = () => { $("#adBottom").style.display = "none"; };
+  document.querySelectorAll(".tab").forEach(b => b.onclick = () => setTab(b.dataset.tab));
+  $("#btnReport").onclick = () => openReport(null);
+  $("#btnRefresh").onclick = () => refresh(true);
+  $("#btnInfo").onclick = () => open("#mInfo");
+  $("#rLine").onchange = fillStops;
+  $("#rStop").onchange = updSend;
+  $("#rSend").onclick = send;
+  $("#btnLocate").onclick = () => locate(true);
+  $("#btnStations").onclick = () => { showStations = !showStations; syncStations(); };
+  $("#filter").onchange = e => { filterLine = e.target.value; renderList(); };
+  $("#btnShare").onclick = async () => {
+    const data = { title: "Contrôle Bruxelles", text: "Les contrôles signalés en direct dans le métro, le tram et le bus à Bruxelles", url: "https://liseo-apps.github.io/controle-bruxelles/" };
+    try { if (navigator.share) await navigator.share(data); else { await navigator.clipboard.writeText(data.url); toast("Lien copié"); } } catch (e) {}
+  };
+  try {
+    NET = await (await fetch("network.json")).json();
+  } catch (e) { $("#status").textContent = "Impossible de charger le réseau. Rechargez la page."; return; }
+  LINES = NET.l.slice().sort(lineSort); LINES.forEach(l => BYID[l.id] = l);
+  $("#netVer").textContent = "données du " + NET.from.replace(/(\d{4})(\d\d)(\d\d)/, "$3/$2/$1");
+  $("#filter").innerHTML += LINES.map(l => '<option value="' + esc(l.id) + '">' + MODE[l.m] + " " + esc(l.id) + "</option>").join("");
+  if (location.hash === "#carte") setTab("map");
+  await refresh();
+  setInterval(() => { if (!document.hidden) refresh(); }, REFRESH_MS);
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) refresh(); });
+  setInterval(() => { ACTIVE = REPORTS.filter(isActive); renderList(); }, 60000);
+}
+start();
+</script>
+</body>
+</html>
